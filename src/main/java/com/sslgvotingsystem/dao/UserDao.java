@@ -58,7 +58,7 @@ public class UserDao {
         return null;
     }
 
-    // Instructor Requirement: getAllUsers()
+
     public List<User> getAllUsers() {
         List<User> userList = new ArrayList<>();
         String query = "SELECT * FROM users ORDER BY id ASC";
@@ -83,7 +83,6 @@ public class UserDao {
         return userList;
     }
 
-    // Instructor Requirement: getPendingUsers()
     public List<User> getPendingUsers() {
         List<User> pendingList = new ArrayList<>();
         String query = "SELECT * FROM users WHERE status = 'PENDING' ORDER BY id ASC";
@@ -108,7 +107,7 @@ public class UserDao {
         return pendingList;
     }
 
-    // Instructor Requirement: approveUser(int userId) using parameterized PreparedStatement
+
     public boolean approveUser(int userId) {
         String query = "UPDATE users SET status = 'APPROVED' WHERE id = ?";
 

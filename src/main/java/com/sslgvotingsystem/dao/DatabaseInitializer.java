@@ -7,7 +7,7 @@ import java.sql.Statement;
 public class DatabaseInitializer {
 
     public static void initializeDatabase() {
-        // SQL queries para sa 6 ka tables sa atong sistema
+
         String createUsersTable = """
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,7 +71,7 @@ public class DatabaseInitializer {
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement()) {
 
-            // I-execute ang paghimo sa mga tables
+
             stmt.execute(createUsersTable);
             stmt.execute(createPositionsTable);
             stmt.execute(createCandidateTable);
