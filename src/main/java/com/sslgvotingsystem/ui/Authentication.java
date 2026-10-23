@@ -107,7 +107,10 @@ public class Authentication {
 
     private void routeUserByRole(User user) {
         switch (user.role().toUpperCase()) {
-            case "ADMIN" -> System.out.println("\n>>> ADMIN DASHBOARD (" + user.fullName() + ") <<< [Placeholder]");
+            case "ADMIN" -> {
+                AdminMenu adminMenu = new AdminMenu(scanner);
+                adminMenu.start();
+            }
             case "STAFF" -> System.out.println("\n>>> STAFF DASHBOARD (" + user.fullName() + ") <<< [Placeholder]");
             case "STUDENT" -> System.out.println("\n>>> STUDENT VOTER DASHBOARD (" + user.fullName() + ") <<< [Placeholder]");
             default -> System.out.println("Unknown role! Access denied.");
