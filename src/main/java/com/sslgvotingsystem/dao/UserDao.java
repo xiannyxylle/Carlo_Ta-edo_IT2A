@@ -7,31 +7,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserDao {
-
     private static final String DB_URL = "jdbc:sqlite:sslgvoting.db";
 
-    // Register a new user
-    public boolean registerUser(String fullName, String username, String password, String role) {
-        String status = role.equalsIgnoreCase("ADMIN") ? "APPROVED" : "PENDING";
+    public boolean registerUser(String fullName, String username, String password, String role, String status) {
         String sql = "INSERT INTO users (full_name, username, password, role, status) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DriverManager.getConnection(DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, fullName);
             pstmt.setString(2, username);
             pstmt.setString(3, password);
-            pstmt.setString(4, role);
-            pstmt.setString(5, status);
-            int rowsAffected = pstmt.executeUpdate();
-            return rowsAffected > 0;
+            pstmt.setString(4, role.toUpperCase());
+            pstmt.setString(5, status.toUpperCase());
+            pstmt.executeUpdate();
+            return true;
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
     }
 
-    // Login user
     public User loginUser(String username, String password) {
-        String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
+        String sql = "SELECT id, full_name, username, password, role, status FROM users WHERE username = ? AND password = ?";
         try (Connection conn = DriverManager.getConnection(DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
@@ -54,10 +50,9 @@ public class UserDao {
         return null;
     }
 
-    // Get all registered accounts regardless of role
     public List<User> getAllUsers() {
         List<User> users = new ArrayList<>();
-        String sql = "SELECT * FROM users";
+        String sql = "SELECT id, full_name, username, password, role, status FROM users";
         try (Connection conn = DriverManager.getConnection(DB_URL);
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -77,10 +72,9 @@ public class UserDao {
         return users;
     }
 
-    // Get all users where status = 'PENDING'
     public List<User> getPendingUsers() {
         List<User> users = new ArrayList<>();
-        String sql = "SELECT * FROM users WHERE status = 'PENDING'";
+        String sql = "SELECT id, full_name, username, password, role, status FROM users WHERE status = 'PENDING'";
         try (Connection conn = DriverManager.getConnection(DB_URL);
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -100,12 +94,26 @@ public class UserDao {
         return users;
     }
 
-    // Approve a target user using parameterized PreparedStatement
     public boolean approveUser(int userId) {
         String sql = "UPDATE users SET status = 'APPROVED' WHERE id = ?";
         try (Connection conn = DriverManager.getConnection(DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, userId);
+            int rowsAffected = pstmt.executeUpdate();
+            return rowsAffected > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean updateUserRoleAndStatus(int userId, String newRole, String newStatus) {
+        String sql = "UPDATE users SET role = ?, status = ? WHERE id = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, newRole.toUpperCase());
+            pstmt.setString(2, newStatus.toUpperCase());
+            pstmt.setInt(3, userId);
             int rowsAffected = pstmt.executeUpdate();
             return rowsAffected > 0;
         } catch (SQLException e) {

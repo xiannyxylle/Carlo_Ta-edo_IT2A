@@ -6,7 +6,6 @@ import com.sslgvotingsystem.model.User;
 import java.util.Scanner;
 
 public class Authentication {
-
     private final UserDao userDao;
     private final Scanner scanner;
 
@@ -17,7 +16,6 @@ public class Authentication {
 
     public void start() {
         boolean running = true;
-
         while (running) {
             System.out.println("\n=== SSLG VOTING & ELECTION SYSTEM ===");
             System.out.println("[1] Register Account");
@@ -26,20 +24,19 @@ public class Authentication {
             System.out.print("Choose an option: ");
 
             String choice = scanner.nextLine().trim();
-
             switch (choice) {
-                case "1" -> register();
-                case "2" -> login();
+                case "1" -> registerAccount();
+                case "2" -> loginAccount();
                 case "3" -> {
-                    System.out.println("Thank you for using SSLG Voting System. Goodbye!");
+                    System.out.println("Exiting system. Goodbye!");
                     running = false;
                 }
-                default -> System.out.println("Invalid option! Please try again.");
+                default -> System.out.println("Invalid option! Please choose between 1, 2, or 3.");
             }
         }
     }
 
-    private void register() {
+    private void registerAccount() {
         System.out.println("\n--- USER REGISTRATION ---");
         System.out.print("Enter Full Name: ");
         String fullName = scanner.nextLine().trim();
@@ -50,38 +47,36 @@ public class Authentication {
         System.out.print("Enter Password: ");
         String password = scanner.nextLine().trim();
 
-        System.out.println("Select Role:");
-        System.out.println("[1] Admin (Comelec Adviser)");
-        System.out.println("[2] Staff (Poll Clerk / Outgoing SSLG President)");
-        System.out.println("[3] Student (Voter)");
-        System.out.print("Choose role: ");
+        String role = readValidRoleRegistration();
+        if (role == null) return;
 
-        String roleChoice = scanner.nextLine().trim();
-        String role = switch (roleChoice) {
-            case "1" -> "ADMIN";
-            case "2" -> "STAFF";
-            case "3" -> "STUDENT";
-            default -> null;
-        };
-
-        if (role == null) {
-            System.out.println("Invalid role selected! Registration cancelled.");
-            return;
+        String status = "PENDING";
+        if (role.equals("ADMIN")) {
+            status = "APPROVED";
         }
 
-        boolean success = userDao.registerUser(fullName, username, password, role);
+        boolean success = userDao.registerUser(fullName, username, password, role, status);
         if (success) {
-            if (role.equals("ADMIN")) {
-                System.out.println("Registration successful! Account is AUTOMATICALLY APPROVED.");
-            } else {
-                System.out.println("Registration successful! Your account status is PENDING approval.");
-            }
+            System.out.println("\nRegistration successful! Account status: " + status);
         } else {
-            System.out.println("Registration failed! Username might already exist.");
+            System.out.println("\nRegistration failed. Username might already exist.");
         }
     }
 
-    private void login() {
+    private String readValidRoleRegistration() {
+        while (true) {
+            System.out.print("Enter Role ([1] ADMIN, [2] STAFF, [3] STUDENT): ");
+            String input = scanner.nextLine().trim().toUpperCase();
+
+            switch (input) {
+                case "1", "ADMIN" -> { return "ADMIN"; }
+                case "2", "STAFF" -> { return "STAFF"; }
+                case "3", "STUDENT" -> { return "STUDENT"; }
+                default -> System.out.println("Invalid role! Please enter 1, 2, 3 OR type ADMIN, STAFF, STUDENT.");
+            }
+        }
+    }
+    private void loginAccount() {
         System.out.println("\n--- USER LOGIN ---");
         System.out.print("Enter Username: ");
         String username = scanner.nextLine().trim();
@@ -90,30 +85,30 @@ public class Authentication {
         String password = scanner.nextLine().trim();
 
         User user = userDao.loginUser(username, password);
-
         if (user == null) {
-            System.out.println("Invalid username or password!");
+            System.out.println("\nLogin Failed! Invalid username or password.");
             return;
         }
 
-        if ("PENDING".equalsIgnoreCase(user.status())) {
-            System.out.println("Your account is still PENDING for admin approval. Please wait for confirmation.");
+        if (!user.status().equalsIgnoreCase("APPROVED")) {
+            System.out.println("\nLogin Failed! Your account is still PENDING approval by an Admin.");
             return;
         }
 
-        System.out.println("\nLogin Successful! Welcome, " + user.fullName() + " (" + user.role() + ")");
-        routeUserByRole(user);
-    }
+        System.out.println("\nLogin Successful! Welcome, " + user.username() + " (" + user.role() + ")");
 
-    private void routeUserByRole(User user) {
         switch (user.role().toUpperCase()) {
             case "ADMIN" -> {
-                AdminMenu adminMenu = new AdminMenu(scanner);
+                AdminMenu adminMenu = new AdminMenu(scanner, user);
                 adminMenu.start();
             }
-            case "STAFF" -> System.out.println("\n>>> STAFF DASHBOARD (" + user.fullName() + ") <<< [Placeholder]");
-            case "STUDENT" -> System.out.println("\n>>> STUDENT VOTER DASHBOARD (" + user.fullName() + ") <<< [Placeholder]");
-            default -> System.out.println("Unknown role! Access denied.");
+            case "STAFF" -> {
+                System.out.println("\n>>> STAFF DASHBOARD (" + user.username() + ") <<< [Placeholder]");
+            }
+            case "STUDENT" -> {
+                System.out.println("\n>>> STUDENT DASHBOARD (" + user.username() + ") <<< [Placeholder]");
+            }
+            default -> System.out.println("\nNo dashboard available for this role.");
         }
     }
 }
