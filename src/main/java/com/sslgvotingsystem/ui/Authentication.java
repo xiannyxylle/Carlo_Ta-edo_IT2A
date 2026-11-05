@@ -1,5 +1,6 @@
 package com.sslgvotingsystem.ui;
 
+import com.sslgvotingsystem.dao.ActivityLogDao;
 import com.sslgvotingsystem.dao.UserDao;
 import com.sslgvotingsystem.model.User;
 
@@ -7,10 +8,12 @@ import java.util.Scanner;
 
 public class Authentication {
     private final UserDao userDao;
+    private final ActivityLogDao logDao;
     private final Scanner scanner;
 
     public Authentication(UserDao userDao, Scanner scanner) {
         this.userDao = userDao;
+        this.logDao = new ActivityLogDao();
         this.scanner = scanner;
     }
 
@@ -76,6 +79,7 @@ public class Authentication {
             }
         }
     }
+
     private void loginAccount() {
         System.out.println("\n--- USER LOGIN ---");
         System.out.print("Enter Username: ");
@@ -94,6 +98,9 @@ public class Authentication {
             System.out.println("\nLogin Failed! Your account is still PENDING approval by an Admin.");
             return;
         }
+
+        // Auto-log successful login
+        logDao.logAction(user.id(), "LOGIN", "User " + user.username() + " (ID: " + user.id() + ") logged in.");
 
         System.out.println("\nLogin Successful! Welcome, " + user.username() + " (" + user.role() + ")");
 

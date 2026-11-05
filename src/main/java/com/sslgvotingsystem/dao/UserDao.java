@@ -8,6 +8,7 @@ import java.util.List;
 
 public class UserDao {
     private static final String DB_URL = "jdbc:sqlite:sslgvoting.db";
+    private final ActivityLogDao logDao = new ActivityLogDao();
 
     public boolean registerUser(String fullName, String username, String password, String role, String status) {
         String sql = "INSERT INTO users (full_name, username, password, role, status) VALUES (?, ?, ?, ?, ?)";
@@ -100,11 +101,15 @@ public class UserDao {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, userId);
             int rowsAffected = pstmt.executeUpdate();
-            return rowsAffected > 0;
+            if (rowsAffected > 0) {
+                // Auto-logging account approval
+                logDao.logAction(userId, "USER_APPROVED", "Approved account for User ID " + userId);
+                return true;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
         }
+        return false;
     }
 
     public boolean updateUserRoleAndStatus(int userId, String newRole, String newStatus) {
@@ -115,10 +120,14 @@ public class UserDao {
             pstmt.setString(2, newStatus.toUpperCase());
             pstmt.setInt(3, userId);
             int rowsAffected = pstmt.executeUpdate();
-            return rowsAffected > 0;
+            if (rowsAffected > 0) {
+                // Auto-logging role/status update
+                logDao.logAction(userId, "USER_UPDATED", "Changed role to " + newRole.toUpperCase() + " and status to " + newStatus.toUpperCase());
+                return true;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
         }
+        return false;
     }
 }

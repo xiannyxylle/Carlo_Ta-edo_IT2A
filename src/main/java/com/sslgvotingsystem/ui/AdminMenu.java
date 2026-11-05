@@ -1,6 +1,8 @@
 package com.sslgvotingsystem.ui;
 
+import com.sslgvotingsystem.dao.ActivityLogDao;
 import com.sslgvotingsystem.dao.UserDao;
+import com.sslgvotingsystem.model.ActivityLog;
 import com.sslgvotingsystem.model.User;
 
 import java.util.List;
@@ -9,11 +11,13 @@ import java.util.Scanner;
 public class AdminMenu {
 
     private final UserDao userDao;
+    private final ActivityLogDao logDao;
     private final Scanner scanner;
     private final User currentAdmin;
 
     public AdminMenu(Scanner scanner, User currentAdmin) {
         this.userDao = new UserDao();
+        this.logDao = new ActivityLogDao();
         this.scanner = scanner;
         this.currentAdmin = currentAdmin;
     }
@@ -30,8 +34,9 @@ public class AdminMenu {
             System.out.println("4. Add New User");
             System.out.println("5. Update User Role / Status");
             System.out.println("6. Delete User Account");
-            System.out.println("7. Logout");
-            System.out.print("Choose an option (1-7): ");
+            System.out.println("7. View System Audit Logs");
+            System.out.println("8. Logout");
+            System.out.print("Choose an option (1-8): ");
 
             String choice = scanner.nextLine().trim();
             switch (choice) {
@@ -41,11 +46,12 @@ public class AdminMenu {
                 case "4" -> addNewUser();
                 case "5" -> updateUserRoleAndStatus();
                 case "6" -> deleteUserAccount();
-                case "7" -> {
+                case "7" -> viewSystemAuditLogs();
+                case "8" -> {
                     System.out.println("Logging out from Admin Dashboard...");
                     running = false;
                 }
-                default -> System.out.println("Invalid option! Please choose between 1-7.");
+                default -> System.out.println("Invalid option! Please choose between 1-8.");
             }
         }
     }
@@ -176,6 +182,48 @@ public class AdminMenu {
         }
 
         System.out.println("User deletion feature placeholder.");
+    }
+
+    private void viewSystemAuditLogs() {
+        boolean viewing = true;
+        while (viewing) {
+            System.out.println("\n=== SYSTEM AUDIT LOGS ===");
+            System.out.println("[1] View All System Logs");
+            System.out.println("[2] Filter Logs by User ID");
+            System.out.println("[3] Back to Admin Dashboard");
+            System.out.print("Choose an option: ");
+
+            String choice = scanner.nextLine().trim();
+            switch (choice) {
+                case "1" -> {
+                    List<ActivityLog> logs = logDao.getAllLogs();
+                    printLogsTable(logs);
+                }
+                case "2" -> {
+                    int userId = readIntInput("Enter User ID to filter: ");
+                    List<ActivityLog> logs = logDao.getLogsByUserId(userId);
+                    printLogsTable(logs);
+                }
+                case "3" -> viewing = false;
+                default -> System.out.println("Invalid option! Please try again.");
+            }
+        }
+    }
+
+    private void printLogsTable(List<ActivityLog> logs) {
+        if (logs.isEmpty()) {
+            System.out.println("\nNo audit logs found.");
+            return;
+        }
+        String line = "+-------+----------+--------------------+-------------------------------------+----------------------+";
+        System.out.println(line);
+        System.out.printf("| %-5s | %-8s | %-18s | %-35s | %-20s |%n", "ID", "User ID", "Action Type", "Description", "Timestamp");
+        System.out.println(line);
+        for (ActivityLog log : logs) {
+            System.out.printf("| %-5d | %-8d | %-18s | %-35s | %-20s |%n",
+                    log.id(), log.userId(), log.actionType(), log.description(), log.timestamp());
+        }
+        System.out.println(line);
     }
 
     private int readIntInput(String prompt) {

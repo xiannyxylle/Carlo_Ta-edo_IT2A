@@ -58,19 +58,20 @@ public class DatabaseInitializer {
             );
         """;
 
+        // Updated for Deliverable 8 Requirements: action_type, description, ON DELETE CASCADE
         String createActivityLogsTable = """
             CREATE TABLE IF NOT EXISTS activity_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER,
-                action TEXT NOT NULL,
+                action_type TEXT NOT NULL,
+                description TEXT NOT NULL,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             );
         """;
 
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement()) {
-
 
             stmt.execute(createUsersTable);
             stmt.execute(createPositionsTable);
