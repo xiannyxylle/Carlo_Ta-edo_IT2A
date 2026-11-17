@@ -1,3 +1,4 @@
+
 package com.sslgvotingsystem.dao;
 
 import com.sslgvotingsystem.model.User;
@@ -7,20 +8,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserDao {
+
     private static final String DB_URL = "jdbc:sqlite:sslgvoting.db";
     private final ActivityLogDao logDao = new ActivityLogDao();
 
     public boolean registerUser(String fullName, String username, String password, String role, String status) {
         String sql = "INSERT INTO users (full_name, username, password, role, status) VALUES (?, ?, ?, ?, ?)";
+
         try (Connection conn = DriverManager.getConnection(DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
             pstmt.setString(1, fullName);
             pstmt.setString(2, username);
             pstmt.setString(3, password);
             pstmt.setString(4, role.toUpperCase());
             pstmt.setString(5, status.toUpperCase());
+
             pstmt.executeUpdate();
             return true;
+
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
@@ -29,10 +35,13 @@ public class UserDao {
 
     public User loginUser(String username, String password) {
         String sql = "SELECT id, full_name, username, password, role, status FROM users WHERE username = ? AND password = ?";
+
         try (Connection conn = DriverManager.getConnection(DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
             pstmt.setString(1, username);
             pstmt.setString(2, password);
+
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     return new User(
@@ -45,18 +54,22 @@ public class UserDao {
                     );
                 }
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
         return null;
     }
 
     public List<User> getAllUsers() {
         List<User> users = new ArrayList<>();
         String sql = "SELECT id, full_name, username, password, role, status FROM users";
+
         try (Connection conn = DriverManager.getConnection(DB_URL);
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
+
             while (rs.next()) {
                 users.add(new User(
                         rs.getInt("id"),
@@ -67,18 +80,22 @@ public class UserDao {
                         rs.getString("status")
                 ));
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
         return users;
     }
 
     public List<User> getPendingUsers() {
         List<User> users = new ArrayList<>();
         String sql = "SELECT id, full_name, username, password, role, status FROM users WHERE status = 'PENDING'";
+
         try (Connection conn = DriverManager.getConnection(DB_URL);
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
+
             while (rs.next()) {
                 users.add(new User(
                         rs.getInt("id"),
@@ -89,45 +106,93 @@ public class UserDao {
                         rs.getString("status")
                 ));
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
         return users;
     }
 
     public boolean approveUser(int userId) {
         String sql = "UPDATE users SET status = 'APPROVED' WHERE id = ?";
+
         try (Connection conn = DriverManager.getConnection(DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
             pstmt.setInt(1, userId);
             int rowsAffected = pstmt.executeUpdate();
+
             if (rowsAffected > 0) {
-                // Auto-logging account approval
-                logDao.logAction(userId, "USER_APPROVED", "Approved account for User ID " + userId);
+                logDao.logAction(
+                        userId,
+                        "USER_APPROVED",
+                        "Approved account for User ID " + userId
+                );
                 return true;
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
         return false;
     }
 
     public boolean updateUserRoleAndStatus(int userId, String newRole, String newStatus) {
         String sql = "UPDATE users SET role = ?, status = ? WHERE id = ?";
+
         try (Connection conn = DriverManager.getConnection(DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
             pstmt.setString(1, newRole.toUpperCase());
             pstmt.setString(2, newStatus.toUpperCase());
             pstmt.setInt(3, userId);
+
             int rowsAffected = pstmt.executeUpdate();
+
             if (rowsAffected > 0) {
-                // Auto-logging role/status update
-                logDao.logAction(userId, "USER_UPDATED", "Changed role to " + newRole.toUpperCase() + " and status to " + newStatus.toUpperCase());
+                logDao.logAction(
+                        userId,
+                        "USER_UPDATED",
+                        "Changed role to " + newRole.toUpperCase()
+                                + " and status to " + newStatus.toUpperCase()
+                );
                 return true;
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
+        return false;
+    }
+
+    // DELETE USER ACCOUNT
+    public boolean deleteUser(int userId, int adminId) {
+        String sql = "DELETE FROM users WHERE id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, userId);
+
+            int rowsAffected = pstmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                logDao.logAction(
+                        adminId,
+                        "USER_DELETED",
+                        "Deleted account for User ID " + userId
+                );
+
+                return true;
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Error deleting user: " + e.getMessage());
+        }
+
         return false;
     }
 }

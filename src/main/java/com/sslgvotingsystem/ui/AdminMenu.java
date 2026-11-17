@@ -1,3 +1,4 @@
+
 package com.sslgvotingsystem.ui;
 
 import com.sslgvotingsystem.dao.ActivityLogDao;
@@ -24,6 +25,7 @@ public class AdminMenu {
 
     public void start() {
         boolean running = true;
+
         while (running) {
             System.out.println("\n==========================================");
             System.out.println("              ADMIN DASHBOARD             ");
@@ -39,6 +41,7 @@ public class AdminMenu {
             System.out.print("Choose an option (1-8): ");
 
             String choice = scanner.nextLine().trim();
+
             switch (choice) {
                 case "1" -> viewAllUsers();
                 case "2" -> viewPendingUserApprovals();
@@ -58,22 +61,26 @@ public class AdminMenu {
 
     private void viewAllUsers() {
         List<User> users = userDao.getAllUsers();
+
         System.out.println("\n--- ALL REGISTERED USERS ---");
         printTableBox(users, false);
     }
 
     private void viewPendingUserApprovals() {
         List<User> pendingUsers = userDao.getPendingUsers();
+
         if (pendingUsers.isEmpty()) {
             System.out.println("\nNo pending user accounts found.");
             return;
         }
+
         System.out.println("\n--- PENDING USER APPROVALS ---");
         printTableBox(pendingUsers, true);
     }
 
     private void approveUserAccount() {
         List<User> pendingUsers = userDao.getPendingUsers();
+
         if (pendingUsers.isEmpty()) {
             System.out.println("\nNo pending user accounts for approval.");
             return;
@@ -82,20 +89,28 @@ public class AdminMenu {
         System.out.println("\n--- APPROVE USER REGISTRATION ---");
         printTableBox(pendingUsers, true);
 
-        int userId = readIntInput("Enter User ID to approve (or type '0' to cancel): ");
+        int userId = readIntInput(
+                "Enter User ID to approve (or type '0' to cancel): "
+        );
+
         if (userId == 0) {
             System.out.println("Approval cancelled.");
             return;
         }
 
         boolean exists = pendingUsers.stream().anyMatch(u -> u.id() == userId);
+
         if (exists) {
             boolean success = userDao.approveUser(userId);
+
             if (success) {
-                System.out.println("\nSUCCESS: User ID " + userId + " has been successfully approved!");
+                System.out.println(
+                        "\nSUCCESS: User ID " + userId + " has been successfully approved!"
+                );
             } else {
                 System.out.println("\nFailed to approve user in the database.");
             }
+
         } else {
             System.out.println("\nInvalid User ID or user is not in the pending list.");
         }
@@ -103,6 +118,7 @@ public class AdminMenu {
 
     private void addNewUser() {
         System.out.println("\n--- ADD NEW USER ---");
+
         System.out.print("Enter Full Name: ");
         String fullName = scanner.nextLine().trim();
 
@@ -115,7 +131,10 @@ public class AdminMenu {
         String role = readValidRole();
         String status = readValidStatus();
 
-        boolean success = userDao.registerUser(fullName, username, password, role, status);
+        boolean success = userDao.registerUser(
+                fullName, username, password, role, status
+        );
+
         if (success) {
             System.out.println("\nSUCCESS: New user added successfully!");
         } else {
@@ -125,6 +144,7 @@ public class AdminMenu {
 
     private void updateUserRoleAndStatus() {
         List<User> users = userDao.getAllUsers();
+
         if (users.isEmpty()) {
             System.out.println("\nNo users found in the system.");
             return;
@@ -133,18 +153,24 @@ public class AdminMenu {
         System.out.println("\n--- UPDATE USER ROLE / STATUS ---");
         printTableBox(users, false);
 
-        int userId = readIntInput("Enter User ID to update (or type '0' to cancel): ");
+        int userId = readIntInput(
+                "Enter User ID to update (or type '0' to cancel): "
+        );
+
         if (userId == 0) {
             System.out.println("Update cancelled.");
             return;
         }
 
         if (currentAdmin != null && userId == currentAdmin.id()) {
-            System.out.println("WARNING: Modifying the currently active admin account is restricted.");
+            System.out.println(
+                    "WARNING: Modifying the currently active admin account is restricted."
+            );
             return;
         }
 
         boolean exists = users.stream().anyMatch(u -> u.id() == userId);
+
         if (!exists) {
             System.out.println("Invalid User ID! User does not exist.");
             return;
@@ -153,39 +179,84 @@ public class AdminMenu {
         String newRole = readValidRole();
         String newStatus = readValidStatus();
 
-        boolean success = userDao.updateUserRoleAndStatus(userId, newRole, newStatus);
+        boolean success = userDao.updateUserRoleAndStatus(
+                userId, newRole, newStatus
+        );
+
         if (success) {
-            System.out.println("\nSUCCESS: User ID " + userId + " has been successfully updated!");
+            System.out.println(
+                    "\nSUCCESS: User ID " + userId + " has been successfully updated!"
+            );
         } else {
             System.out.println("\nFailed to update user in the database.");
         }
     }
 
+    // DELETE USER ACCOUNT
     private void deleteUserAccount() {
         System.out.println("\n--- DELETE USER ACCOUNT ---");
+
         List<User> users = userDao.getAllUsers();
+
         if (users.isEmpty()) {
             System.out.println("No users found.");
             return;
         }
+
         printTableBox(users, false);
 
-        int userId = readIntInput("Enter User ID to delete (or type '0' to cancel): ");
+        int userId = readIntInput(
+                "Enter User ID to delete (or type '0' to cancel): "
+        );
+
         if (userId == 0) {
             System.out.println("Deletion cancelled.");
             return;
         }
 
+        // Prevent deleting the currently logged-in admin
         if (currentAdmin != null && userId == currentAdmin.id()) {
-            System.out.println("WARNING: Deleting the currently active admin account is restricted.");
+            System.out.println(
+                    "WARNING: Deleting the currently active admin account is restricted."
+            );
             return;
         }
 
-        System.out.println("User deletion feature placeholder.");
+        // Check if the selected user exists
+        boolean exists = users.stream().anyMatch(u -> u.id() == userId);
+
+        if (!exists) {
+            System.out.println("Invalid User ID! User does not exist.");
+            return;
+        }
+
+        // Ask for confirmation
+        System.out.print(
+                "Are you sure you want to delete User ID " + userId + "? (Y/N): "
+        );
+
+        String confirmation = scanner.nextLine().trim();
+
+        if (!confirmation.equalsIgnoreCase("Y")) {
+            System.out.println("Deletion cancelled.");
+            return;
+        }
+
+        // Call the delete method in UserDao
+        boolean success = userDao.deleteUser(userId, currentAdmin.id());
+
+        if (success) {
+            System.out.println(
+                    "\nSUCCESS: User ID " + userId + " has been deleted successfully!"
+            );
+        } else {
+            System.out.println("\nFailed to delete user.");
+        }
     }
 
     private void viewSystemAuditLogs() {
         boolean viewing = true;
+
         while (viewing) {
             System.out.println("\n=== SYSTEM AUDIT LOGS ===");
             System.out.println("[1] View All System Logs");
@@ -194,6 +265,7 @@ public class AdminMenu {
             System.out.print("Choose an option: ");
 
             String choice = scanner.nextLine().trim();
+
             switch (choice) {
                 case "1" -> {
                     List<ActivityLog> logs = logDao.getAllLogs();
@@ -215,14 +287,27 @@ public class AdminMenu {
             System.out.println("\nNo audit logs found.");
             return;
         }
+
         String line = "+-------+----------+--------------------+-------------------------------------+----------------------+";
+
         System.out.println(line);
-        System.out.printf("| %-5s | %-8s | %-18s | %-35s | %-20s |%n", "ID", "User ID", "Action Type", "Description", "Timestamp");
+        System.out.printf(
+                "| %-5s | %-8s | %-18s | %-35s | %-20s |%n",
+                "ID", "User ID", "Action Type", "Description", "Timestamp"
+        );
         System.out.println(line);
+
         for (ActivityLog log : logs) {
-            System.out.printf("| %-5d | %-8d | %-18s | %-35s | %-20s |%n",
-                    log.id(), log.userId(), log.actionType(), log.description(), log.timestamp());
+            System.out.printf(
+                    "| %-5d | %-8d | %-18s | %-35s | %-20s |%n",
+                    log.id(),
+                    log.userId(),
+                    log.actionType(),
+                    log.description(),
+                    log.timestamp()
+            );
         }
+
         System.out.println(line);
     }
 
@@ -230,24 +315,38 @@ public class AdminMenu {
         while (true) {
             System.out.print(prompt);
             String input = scanner.nextLine().trim();
+
             try {
                 return Integer.parseInt(input);
             } catch (NumberFormatException e) {
-                System.out.println("Invalid input! Please enter a valid numeric ID.");
+                System.out.println(
+                        "Invalid input! Please enter a valid numeric ID."
+                );
             }
         }
     }
 
     private String readValidRole() {
         while (true) {
-            System.out.print("Enter Role ([1] ADMIN, [2] STAFF, [3] STUDENT): ");
+            System.out.print(
+                    "Enter Role ([1] ADMIN, [2] STAFF, [3] STUDENT): "
+            );
+
             String input = scanner.nextLine().trim().toUpperCase();
 
             switch (input) {
-                case "1", "ADMIN" -> { return "ADMIN"; }
-                case "2", "STAFF" -> { return "STAFF"; }
-                case "3", "STUDENT" -> { return "STUDENT"; }
-                default -> System.out.println("Invalid role! Please enter 1, 2, 3 OR type ADMIN, STAFF, STUDENT.");
+                case "1", "ADMIN" -> {
+                    return "ADMIN";
+                }
+                case "2", "STAFF" -> {
+                    return "STAFF";
+                }
+                case "3", "STUDENT" -> {
+                    return "STUDENT";
+                }
+                default -> System.out.println(
+                        "Invalid role! Please enter 1, 2, 3 OR type ADMIN, STAFF, STUDENT."
+                );
             }
         }
     }
@@ -255,34 +354,55 @@ public class AdminMenu {
     private String readValidStatus() {
         while (true) {
             System.out.print("Enter status (APPROVED, PENDING): ");
+
             String status = scanner.nextLine().trim().toUpperCase();
+
             if (status.equals("APPROVED") || status.equals("PENDING")) {
                 return status;
             }
-            System.out.println("Invalid status! Please enter APPROVED or PENDING.");
+
+            System.out.println(
+                    "Invalid status! Please enter APPROVED or PENDING."
+            );
         }
     }
 
     private void printTableBox(List<User> users, boolean isPendingOnly) {
         String line = "+-----+----------------------+-----------------+------------+------------+";
+
         if (isPendingOnly) {
             line = "+-----+----------------------+-----------------+------------+";
+
             System.out.println(line);
-            System.out.printf("| %-3s | %-20s | %-15s | %-10s |%n", "ID", "Full Name", "Username", "Role");
+            System.out.printf(
+                    "| %-3s | %-20s | %-15s | %-10s |%n",
+                    "ID", "Full Name", "Username", "Role"
+            );
             System.out.println(line);
+
             for (User u : users) {
-                System.out.printf("| %-3d | %-20s | %-15s | %-10s |%n",
-                        u.id(), u.fullName(), u.username(), u.role());
+                System.out.printf(
+                        "| %-3d | %-20s | %-15s | %-10s |%n",
+                        u.id(), u.fullName(), u.username(), u.role()
+                );
             }
+
         } else {
             System.out.println(line);
-            System.out.printf("| %-3s | %-20s | %-15s | %-10s | %-10s |%n", "ID", "Full Name", "Username", "Role", "Status");
+            System.out.printf(
+                    "| %-3s | %-20s | %-15s | %-10s | %-10s |%n",
+                    "ID", "Full Name", "Username", "Role", "Status"
+            );
             System.out.println(line);
+
             for (User u : users) {
-                System.out.printf("| %-3d | %-20s | %-15s | %-10s | %-10s |%n",
-                        u.id(), u.fullName(), u.username(), u.role(), u.status());
+                System.out.printf(
+                        "| %-3d | %-20s | %-15s | %-10s | %-10s |%n",
+                        u.id(), u.fullName(), u.username(), u.role(), u.status()
+                );
             }
         }
+
         System.out.println(line);
     }
 }
