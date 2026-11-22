@@ -99,7 +99,7 @@ public class ReportExporter {
         Path outputPath = Paths.get("SSLG_Election_Results_" + fileTimestamp + ".csv").toAbsolutePath();
 
         try (PrintWriter writer = new PrintWriter(new FileWriter(outputPath.toFile()))) {
-            writer.println("SSLG ELECTION RESULTS SUMMARY");
+            writer.println("ELIGIO T. MONTE DE RAMOS HIGH SCHOOL SSLG ELECTION RESULTS SUMMARY");
             writer.println("Generated On," + escapeCsv(displayTimestamp));
             writer.printf("Voter Turnout,%d / %d Approved Students (%.1f%%)%n", totalVoted, totalStudents, percentage);
             writer.println();
