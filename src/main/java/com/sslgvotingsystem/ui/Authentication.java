@@ -1,9 +1,14 @@
 package com.sslgvotingsystem.ui;
 
 import com.sslgvotingsystem.dao.ActivityLogDao;
+import com.sslgvotingsystem.dao.DatabaseConnection;
 import com.sslgvotingsystem.dao.UserDao;
 import com.sslgvotingsystem.model.User;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Scanner;
 
 public class Authentication {
@@ -20,8 +25,9 @@ public class Authentication {
     public void start() {
         boolean running = true;
         while (running) {
-            System.out.println("\n=== SSLG VOTING & ELECTION SYSTEM ===");
-            System.out.println("[1] Register Account");
+            System.out.println("\n========== ELIGIO T. MONTE DE RAMOS HIGH SCHOOL ==========");
+            System.out.println("=== SUPREME SECONDARY LEARNER'S GOVERNMENT VOTING ELECTION ===");
+            System.out.println("\n[1] Register Account");
             System.out.println("[2] Login");
             System.out.println("[3] Exit");
             System.out.print("Choose an option: ");
@@ -47,28 +53,92 @@ public class Authentication {
         System.out.print("Enter Username: ");
         String username = scanner.nextLine().trim();
 
+        System.out.print("Enter School ID: ");
+        String schoolId = scanner.nextLine().trim();
+
         System.out.print("Enter Password: ");
         String password = scanner.nextLine().trim();
+
+        if (fullName.isEmpty() || username.isEmpty() || schoolId.isEmpty() || password.isEmpty()) {
+            System.out.println("\nAll fields (Full Name, Username, School ID, Password) are required.");
+            return;
+        }
 
         String role = readValidRoleRegistration();
         if (role == null) return;
 
-        String status = "PENDING";
-        if (role.equals("ADMIN")) {
-            status = "APPROVED";
+        String gradeSection = null;
+        if (role.equals("STUDENT")) {
+            System.out.print("Enter Grade & Section (e.g., Grade 10 - Rizal): ");
+            gradeSection = scanner.nextLine().trim();
         }
 
-        boolean success = userDao.registerUser(fullName, username, password, role, status);
+        String status = role.equals("ADMIN") ? "APPROVED" : "PENDING";
+
+        boolean success = registerWithSchoolId(schoolId, fullName, username, password, role, status);
         if (success) {
-            System.out.println("\nRegistration successful! Account status: " + status);
+            if (role.equals("STUDENT")) {
+                saveVoterGradeSection(schoolId, gradeSection);
+            }
+            System.out.println("\nRegistration successful! School ID: " + schoolId + " | Account status: " + status);
         } else {
-            System.out.println("\nRegistration failed. Username might already exist.");
+            System.out.println("\nRegistration failed. Username or School ID might already exist.");
+        }
+    }
+
+    private boolean registerWithSchoolId(String schoolId, String fullName, String username, String password, String role, String status) {
+        String sql = "INSERT INTO users (school_id, full_name, username, password, role, status) VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, schoolId);
+            pstmt.setString(2, fullName);
+            pstmt.setString(3, username);
+            pstmt.setString(4, password);
+            pstmt.setString(5, role);
+            pstmt.setString(6, status);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Error registering account: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private void saveVoterGradeSection(String schoolId, String gradeSection) {
+        String findUserSql = "SELECT id FROM users WHERE school_id = ?";
+        String upsertVoterSql = """
+            INSERT INTO voter (user_id, school_id, grade_section, has_voted)
+            VALUES (?, ?, ?, 0)
+            ON CONFLICT(user_id) DO UPDATE SET
+                school_id = excluded.school_id,
+                grade_section = excluded.grade_section
+        """;
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement findStmt = conn.prepareStatement(findUserSql)) {
+
+            findStmt.setString(1, schoolId);
+            try (ResultSet rs = findStmt.executeQuery()) {
+                if (rs.next()) {
+                    int userId = rs.getInt("id");
+                    try (PreparedStatement upsertStmt = conn.prepareStatement(upsertVoterSql)) {
+                        upsertStmt.setInt(1, userId);
+                        upsertStmt.setString(2, schoolId);
+                        upsertStmt.setString(3, gradeSection);
+                        upsertStmt.executeUpdate();
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Warning: Could not save voter grade & section: " + e.getMessage());
         }
     }
 
     private String readValidRoleRegistration() {
         while (true) {
-            System.out.print("Enter Role ([1] ADMIN, [2] STAFF, [3] STUDENT): ");
+            System.out.println("Enter Role: ");
+            System.out.println("[1] ADMIN: ");
+            System.out.println("[2] STAFF: ");
+            System.out.print("[3] STUDENT: ");
             String input = scanner.nextLine().trim().toUpperCase();
 
             switch (input) {
@@ -78,19 +148,19 @@ public class Authentication {
                 default -> System.out.println("Invalid role! Please enter 1, 2, 3 OR type ADMIN, STAFF, STUDENT.");
             }
         }
-    }
+     }
 
     private void loginAccount() {
         System.out.println("\n--- USER LOGIN ---");
-        System.out.print("Enter Username: ");
-        String username = scanner.nextLine().trim();
+        System.out.print("Enter School ID: ");
+        String schoolId = scanner.nextLine().trim();
 
         System.out.print("Enter Password: ");
         String password = scanner.nextLine().trim();
 
-        User user = userDao.loginUser(username, password);
+        User user = loginBySchoolId(schoolId, password);
         if (user == null) {
-            System.out.println("\nLogin Failed! Invalid username or password.");
+            System.out.println("\nLogin Failed! Invalid School ID or password.");
             return;
         }
 
@@ -99,23 +169,40 @@ public class Authentication {
             return;
         }
 
-        // Auto-log successful login
-        logDao.logAction(user.id(), "LOGIN", "User " + user.username() + " (ID: " + user.id() + ") logged in.");
+        logDao.logAction(user.id(), "LOGIN", "School ID " + schoolId + " (" + user.fullName() + ") logged in.");
 
-        System.out.println("\nLogin Successful! Welcome, " + user.username() + " (" + user.role() + ")");
+        System.out.println("\nLogin Successful! Welcome, " + user.fullName() + " [" + schoolId + "] (" + user.role() + ")");
 
         switch (user.role().toUpperCase()) {
-            case "ADMIN" -> {
-                AdminMenu adminMenu = new AdminMenu(scanner, user);
-                adminMenu.start();
-            }
-            case "STAFF" -> {
-                System.out.println("\n>>> STAFF DASHBOARD (" + user.username() + ") <<< [Placeholder]");
-            }
-            case "STUDENT" -> {
-                System.out.println("\n>>> STUDENT DASHBOARD (" + user.username() + ") <<< [Placeholder]");
-            }
+            case "ADMIN" -> new AdminMenu(scanner, user).start();
+            case "STAFF" -> new StaffMenu(scanner, user).start();
+            case "STUDENT" -> new VoterMenu(scanner, user).start();
             default -> System.out.println("\nNo dashboard available for this role.");
         }
+    }
+
+    private User loginBySchoolId(String schoolId, String password) {
+        String sql = "SELECT id, full_name, username, password, role, status FROM users WHERE (school_id = ? OR username = ?) AND password = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, schoolId);
+            pstmt.setString(2, schoolId);
+            pstmt.setString(3, password);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return new User(
+                            rs.getInt("id"),
+                            rs.getString("full_name"),
+                            rs.getString("username"),
+                            rs.getString("password"),
+                            rs.getString("role"),
+                            rs.getString("status")
+                    );
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error during login: " + e.getMessage());
+        }
+        return null;
     }
 }
