@@ -134,7 +134,7 @@ public class ReportExporter {
 
         StringBuilder html = new StringBuilder();
         html.append("<html><head><meta charset=\"UTF-8\"></head><body>");
-        html.append("<h2>SSLG ELECTION RESULTS SUMMARY</h2>");
+        html.append("<h2>\"ELIGIO T. MONTE DE RAMOS HIGH SCHOOL SSLG ELECTION RESULTS SUMMARY\"</h2>");
         html.append("<p><b>Generated On:</b> ").append(escapeHtml(displayTimestamp)).append("</p>");
         html.append("<p><b>Voter Turnout:</b> ").append(totalVoted).append(" / ").append(totalStudents)
                 .append(String.format(" Approved Students (%.1f%%)", percentage)).append("</p>");
