@@ -175,7 +175,7 @@ public class ReportExporter {
         Path outputPath = Paths.get("SSLG_Election_Results_" + fileTimestamp + ".pdf").toAbsolutePath();
 
         List<String> lines = new ArrayList<>();
-        lines.add("SSLG ELECTION RESULTS SUMMARY");
+        lines.add("ELIGIO T. MONTE DE RAMOS HIGH SCHOOL SSLG ELECTION RESULTS SUMMARY");
         lines.add("Generated On: " + displayTimestamp);
         lines.add(String.format("Voter Turnout: %d / %d Approved Students (%.1f%%)", totalVoted, totalStudents, percentage));
         lines.add("--------------------------------------------------------------------------------");
