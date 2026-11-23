@@ -1,4 +1,3 @@
-
 package com.sslgvotingsystem.dao;
 
 import com.sslgvotingsystem.model.User;
@@ -13,16 +12,23 @@ public class UserDao {
     private final ActivityLogDao logDao = new ActivityLogDao();
 
     public boolean registerUser(String fullName, String username, String password, String role, String status) {
-        String sql = "INSERT INTO users (full_name, username, password, role, status) VALUES (?, ?, ?, ?, ?)";
+        return registerUser(null, fullName, username, password, role, status);
+    }
+
+    public boolean registerUser(String schoolId, String fullName, String username, String password, String role, String status) {
+        String sql = "INSERT INTO users (school_id, full_name, username, password, role, status) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DriverManager.getConnection(DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setString(1, fullName);
-            pstmt.setString(2, username);
-            pstmt.setString(3, password);
-            pstmt.setString(4, role.toUpperCase());
-            pstmt.setString(5, status.toUpperCase());
+            String normalizedSchoolId = (schoolId == null || schoolId.isBlank()) ? null : schoolId.trim();
+
+            pstmt.setString(1, normalizedSchoolId);
+            pstmt.setString(2, fullName);
+            pstmt.setString(3, username);
+            pstmt.setString(4, password);
+            pstmt.setString(5, role.toUpperCase());
+            pstmt.setString(6, status.toUpperCase());
 
             pstmt.executeUpdate();
             return true;
@@ -30,6 +36,39 @@ public class UserDao {
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
+        }
+    }
+
+    public void saveVoterProfileByUsername(String username, String schoolId, String gradeSection) {
+        String selectSql = "SELECT id FROM users WHERE username = ?";
+        String upsertSql = """
+                INSERT INTO voter (user_id, grade_section, has_voted, school_id)
+                VALUES (?, ?, 0, ?)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    grade_section = COALESCE(excluded.grade_section, voter.grade_section),
+                    school_id = COALESCE(excluded.school_id, voter.school_id)
+                """;
+
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement selectStmt = conn.prepareStatement(selectSql)) {
+
+            selectStmt.setString(1, username);
+            try (ResultSet rs = selectStmt.executeQuery()) {
+                if (rs.next()) {
+                    int userId = rs.getInt("id");
+                    String normalizedGrade = (gradeSection == null || gradeSection.isBlank()) ? null : gradeSection.trim();
+                    String normalizedSchoolId = (schoolId == null || schoolId.isBlank()) ? null : schoolId.trim();
+
+                    try (PreparedStatement upsertStmt = conn.prepareStatement(upsertSql)) {
+                        upsertStmt.setInt(1, userId);
+                        upsertStmt.setString(2, normalizedGrade);
+                        upsertStmt.setString(3, normalizedSchoolId);
+                        upsertStmt.executeUpdate();
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 

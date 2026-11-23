@@ -83,12 +83,6 @@ public class DatabaseInitializer {
             );
         """;
 
-        // Ensures a default admin account exists on a fresh database
-        String seedDefaultAdmin = """
-            INSERT OR IGNORE INTO users (school_id, full_name, username, password, role, status)
-            VALUES ('ADMIN-001', 'System Administrator', 'admin', 'admin123', 'ADMIN', 'APPROVED');
-        """;
-
         String seedDefaultElectionStatus = """
             INSERT OR IGNORE INTO election_settings (id, status)
             VALUES (1, 'OPEN');
@@ -112,7 +106,6 @@ public class DatabaseInitializer {
             try {
                 stmt.execute("ALTER TABLE users ADD COLUMN school_id TEXT;");
                 stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_school_id ON users(school_id);");
-                stmt.execute("UPDATE users SET school_id = 'ADMIN-001' WHERE username = 'admin' AND school_id IS NULL;");
             } catch (SQLException ignored) {
                 // school_id column already exists
             }
@@ -129,7 +122,6 @@ public class DatabaseInitializer {
                 // school_id column already exists in voter
             }
 
-            stmt.execute(seedDefaultAdmin);
             stmt.execute(seedDefaultElectionStatus);
 
             System.out.println("Database tables initialized successfully.");

@@ -158,6 +158,8 @@ public class AdminMenu {
 
     private void addNewUser() {
         System.out.println("\n--- ADD NEW USER ---");
+        System.out.print("Enter School ID: ");
+        String schoolId = scanner.nextLine().trim();
         System.out.print("Enter Full Name: ");
         String fullName = scanner.nextLine().trim();
         System.out.print("Enter Username: ");
@@ -168,10 +170,19 @@ public class AdminMenu {
         String role = readValidRole();
         String status = readValidStatus();
 
-        if (userDao.registerUser(fullName, username, password, role, status)) {
-            System.out.println("\nSUCCESS: New user added successfully!");
+        String gradeLevel = null;
+        if ("STUDENT".equalsIgnoreCase(role)) {
+            System.out.print("Enter Grade Level: ");
+            gradeLevel = scanner.nextLine().trim();
+        }
+
+        if (userDao.registerUser(schoolId, fullName, username, password, role, status)) {
+            if ("STUDENT".equalsIgnoreCase(role)) {
+                userDao.saveVoterProfileByUsername(username, schoolId, gradeLevel);
+            }
+            System.out.println("\nSUCCESS: New user added successfully! (School ID: " + schoolId + ")");
         } else {
-            System.out.println("\nFailed to add user. Username might already exist.");
+            System.out.println("\nFailed to add user. Username or School ID might already exist.");
         }
     }
 
